@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:Path = \"$env:Path;$env:LOCALAPPDATA\\\\Programs\\\\nodejs\"; npx tsc -b --force)"
+    ]
+  }
+}
