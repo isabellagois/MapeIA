@@ -10,6 +10,7 @@ import {
   Download,
   List,
   MessageCircle,
+  Plus,
   Search,
   Trash2,
   Upload,
@@ -32,6 +33,7 @@ import StatusBadge from '../components/StatusBadge'
 import PrioridadeBadge from '../components/PrioridadeBadge'
 import Spinner from '../components/Spinner'
 import CsvImportModal from '../components/CsvImportModal'
+import ManualLeadsModal from '../components/ManualLeadsModal'
 import ApifySearchModal from '../components/ApifySearchModal'
 import LeadDrawer from '../components/LeadDrawer'
 
@@ -76,6 +78,7 @@ export default function CampaignDetail() {
 
   // Modais
   const [importAberto, setImportAberto] = useState(false)
+  const [manualAberto, setManualAberto] = useState(false)
   const [buscaAberta, setBuscaAberta] = useState(false)
   const [leadAberto, setLeadAberto] = useState<Lead | null>(null)
 
@@ -345,6 +348,9 @@ export default function CampaignDetail() {
           </button>
           {podeEditar && (
             <>
+              <button onClick={() => setManualAberto(true)} className="btn-secondary">
+                <Plus size={16} /> Adicionar manualmente
+              </button>
               <button onClick={() => setImportAberto(true)} className="btn-primary">
                 <Upload size={16} /> Importar CSV
               </button>
@@ -513,7 +519,7 @@ export default function CampaignDetail() {
               <tr>
                 <td colSpan={podeEditar ? 10 : 9} className="px-4 py-10 text-center text-gray-400">
                   {leads.length === 0
-                    ? 'Nenhum lead ainda. Use "Importar CSV" para trazer sua lista de prospecção.'
+                    ? 'Nenhum lead ainda. Use "Adicionar manualmente", "Importar CSV" ou a busca para montar sua lista.'
                     : 'Nenhum lead corresponde aos filtros.'}
                 </td>
               </tr>
@@ -699,6 +705,16 @@ export default function CampaignDetail() {
           orgId={profile.org_id}
           aberto={importAberto}
           onFechar={() => setImportAberto(false)}
+          onImportado={() => carregar()}
+        />
+      )}
+
+      {profile && (
+        <ManualLeadsModal
+          campaignId={campanha.id}
+          orgId={profile.org_id}
+          aberto={manualAberto}
+          onFechar={() => setManualAberto(false)}
           onImportado={() => carregar()}
         />
       )}
