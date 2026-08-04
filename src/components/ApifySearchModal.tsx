@@ -178,6 +178,7 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
           whatsapp: l.whatsapp,
           website: l.website,
           endereco: l.endereco,
+          bairro: l.bairro,
           cidade: l.cidade,
           nota_gmn: l.nota_gmn,
           link_gmn: l.link_gmn,

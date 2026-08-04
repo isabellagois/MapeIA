@@ -47,6 +47,7 @@ export interface Lead {
   whatsapp: string | null
   website: string | null
   endereco: string | null
+  bairro: string | null
   cidade: string | null
   nota_gmn: number | null
   itens_faltando_gmn: string | null
@@ -103,6 +104,7 @@ export interface CsvLeadRow {
   whatsapp?: string
   website?: string
   endereco?: string
+  bairro?: string
   cidade?: string
   nota_gmn?: string
   itens_faltando_gmn?: string

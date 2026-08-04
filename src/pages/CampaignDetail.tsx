@@ -9,6 +9,7 @@ import {
   Columns3,
   Download,
   List,
+  Mail,
   MessageCircle,
   Plus,
   Search,
@@ -35,6 +36,7 @@ import Spinner from '../components/Spinner'
 import CsvImportModal from '../components/CsvImportModal'
 import ManualLeadsModal from '../components/ManualLeadsModal'
 import ApifySearchModal from '../components/ApifySearchModal'
+import EmailMassaModal from '../components/EmailMassaModal'
 import LeadDrawer from '../components/LeadDrawer'
 
 const POR_PAGINA = 50
@@ -80,6 +82,7 @@ export default function CampaignDetail() {
   const [importAberto, setImportAberto] = useState(false)
   const [manualAberto, setManualAberto] = useState(false)
   const [buscaAberta, setBuscaAberta] = useState(false)
+  const [emailAberto, setEmailAberto] = useState(false)
   const [leadAberto, setLeadAberto] = useState<Lead | null>(null)
 
   const carregar = useCallback(async () => {
@@ -348,6 +351,14 @@ export default function CampaignDetail() {
           </button>
           {podeEditar && (
             <>
+              <button
+                onClick={() => setEmailAberto(true)}
+                disabled={leads.length === 0}
+                className="btn-primary"
+                title="Criar uma campanha de e-mail para os leads filtrados"
+              >
+                <Mail size={16} /> Criar campanha de e-mail
+              </button>
               <button onClick={() => setManualAberto(true)} className="btn-secondary">
                 <Plus size={16} /> Adicionar manualmente
               </button>
@@ -730,6 +741,13 @@ export default function CampaignDetail() {
           onImportado={() => carregar()}
         />
       )}
+
+      <EmailMassaModal
+        leads={filtrados}
+        aberto={emailAberto}
+        onFechar={() => setEmailAberto(false)}
+        onEnviado={() => notificarLeadsAtualizados()}
+      />
 
       {leadAberto && (
         <LeadDrawer

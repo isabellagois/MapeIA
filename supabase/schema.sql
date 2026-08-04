@@ -40,6 +40,7 @@ create table if not exists public.leads (
   whatsapp            text,
   website             text,
   endereco            text,
+  bairro              text,
   cidade              text,
   nota_gmn            numeric,
   itens_faltando_gmn  text,

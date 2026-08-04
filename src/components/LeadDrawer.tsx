@@ -54,6 +54,7 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
   const [whatsapp, setWhatsapp] = useState(lead.whatsapp ?? '')
   const [website, setWebsite] = useState(lead.website ?? '')
   const [endereco, setEndereco] = useState(lead.endereco ?? '')
+  const [bairro, setBairro] = useState(lead.bairro ?? '')
   const [cidadeLead, setCidadeLead] = useState(lead.cidade ?? '')
   const [prioridade, setPrioridade] = useState<string>(lead.prioridade ?? '')
   const [cargo, setCargo] = useState(lead.cargo ?? '')
@@ -79,6 +80,7 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
     setWhatsapp(lead.whatsapp ?? '')
     setWebsite(lead.website ?? '')
     setEndereco(lead.endereco ?? '')
+    setBairro(lead.bairro ?? '')
     setCidadeLead(lead.cidade ?? '')
     setPrioridade(lead.prioridade ?? '')
     setCargo(lead.cargo ?? '')
@@ -125,6 +127,7 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
       whatsapp: whatsapp.trim() || null,
       website: website.trim() || null,
       endereco: endereco.trim() || null,
+      bairro: bairro.trim() || null,
       cidade: cidadeLead.trim() || null,
       prioridade: (prioridade || null) as Prioridade | null,
       cargo: cargo.trim() || null,
@@ -324,9 +327,14 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
                 <input value={endereco} onChange={(e) => setEndereco(e.target.value)} className="input" />
               </Campo>
               <div className="grid grid-cols-2 gap-3">
+                <Campo rotulo="Bairro">
+                  <input value={bairro} onChange={(e) => setBairro(e.target.value)} className="input" />
+                </Campo>
                 <Campo rotulo="Cidade">
                   <input value={cidadeLead} onChange={(e) => setCidadeLead(e.target.value)} className="input" />
                 </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <Campo rotulo="Prioridade">
                   <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="input">
                     <option value="">Sem prioridade</option>

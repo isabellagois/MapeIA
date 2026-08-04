@@ -110,6 +110,7 @@ export default function CsvImportModal({ campaignId, orgId, aberto, onFechar, on
           whatsapp: l.whatsapp ?? null,
           website: l.website ?? null,
           endereco: l.endereco ?? null,
+          bairro: l.bairro ?? null,
           cidade: l.cidade ?? null,
           nota_gmn: normalizarNota(l.nota_gmn),
           itens_faltando_gmn: l.itens_faltando_gmn ?? null,
@@ -171,8 +172,8 @@ export default function CsvImportModal({ campaignId, orgId, aberto, onFechar, on
                     <FileUp size={32} />
                     <span className="font-medium">Clique para escolher o arquivo CSV</span>
                     <span className="text-xs text-gray-400">
-                      Colunas esperadas: nome_empresa, telefone, whatsapp, website, endereco, cidade,
-                      nota_gmn, itens_faltando_gmn, argumento_vendas, prioridade
+                      Colunas esperadas: nome_empresa, telefone, whatsapp, website, endereco, bairro,
+                      cidade, nota_gmn, itens_faltando_gmn, argumento_vendas, prioridade
                     </span>
                   </>
                 )}

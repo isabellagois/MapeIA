@@ -18,13 +18,14 @@ interface LinhaManual {
   nome_empresa: string
   telefone: string
   whatsapp: string
+  bairro: string
   cidade: string
   website: string
   prioridade: string
 }
 
 function linhaVazia(): LinhaManual {
-  return { nome_empresa: '', telefone: '', whatsapp: '', cidade: '', website: '', prioridade: '' }
+  return { nome_empresa: '', telefone: '', whatsapp: '', bairro: '', cidade: '', website: '', prioridade: '' }
 }
 
 type Etapa = 'edicao' | 'salvando' | 'concluido'
@@ -124,6 +125,7 @@ export default function ManualLeadsModal({ campaignId, orgId, aberto, onFechar, 
         telefone: l.telefone.trim() || null,
         whatsapp: l.whatsapp.trim() || null,
         website: l.website.trim() || null,
+        bairro: l.bairro.trim() || null,
         cidade: l.cidade.trim() || null,
         prioridade: (l.prioridade || null) as 'Alta' | 'Média' | 'Baixa' | null,
       }))
@@ -196,6 +198,7 @@ export default function ManualLeadsModal({ campaignId, orgId, aberto, onFechar, 
                       </th>
                       <th className="px-3 py-2 font-medium">Telefone</th>
                       <th className="px-3 py-2 font-medium">WhatsApp</th>
+                      <th className="px-3 py-2 font-medium">Bairro</th>
                       <th className="px-3 py-2 font-medium">Cidade</th>
                       <th className="px-3 py-2 font-medium">Website</th>
                       <th className="px-3 py-2 font-medium">Prioridade</th>
@@ -227,6 +230,14 @@ export default function ManualLeadsModal({ campaignId, orgId, aberto, onFechar, 
                             onChange={(e) => atualizarCampo(i, 'whatsapp', e.target.value)}
                             className="input"
                             placeholder="(61) 99999-0000"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={l.bairro}
+                            onChange={(e) => atualizarCampo(i, 'bairro', e.target.value)}
+                            className="input"
+                            placeholder="Centro"
                           />
                         </td>
                         <td className="px-2 py-1.5">

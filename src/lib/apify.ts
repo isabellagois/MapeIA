@@ -35,6 +35,7 @@ export interface ResultadoApify {
   whatsapp: string | null
   website: string | null
   endereco: string | null
+  bairro: string | null
   cidade: string | null
   nota_gmn: number | null
   link_gmn: string | null
@@ -110,6 +111,7 @@ export async function buscarLeadsGoogleMaps(
         whatsapp: fone,
         website: (i.website as string) || null,
         endereco: (i.address as string) || null,
+        bairro: (i.neighborhood as string) || null,
         cidade: (i.city as string) || cidade,
         nota_gmn: typeof i.totalScore === 'number' ? i.totalScore : null,
         link_gmn: (i.url as string) || null,
@@ -176,6 +178,7 @@ export async function buscarLeadsInstagram(
         whatsapp: fone,
         website: (p.externalUrl as string) || null,
         endereco: null,
+        bairro: null,
         cidade: cidade || null,
         nota_gmn: null,
         link_gmn: `https://www.instagram.com/${p.username as string}/`,
@@ -288,6 +291,7 @@ export async function buscarLeadsLinkedIn(
         whatsapp: fone,
         website: null,
         endereco: null,
+        bairro: null,
         cidade: local,
         nota_gmn: null,
         link_gmn: linkedinUrl,
