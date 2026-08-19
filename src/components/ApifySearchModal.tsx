@@ -16,6 +16,7 @@ import {
   listarLocalidades,
   normalizar,
   PAISES_DDI,
+  sugerirHashtags,
   type FiltroLocal,
   type Localidade,
 } from '../lib/localidades'
@@ -49,6 +50,8 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
   const [localidadeNome, setLocalidadeNome] = useState('') // '' = digitar manualmente
   const [bairrosExtras, setBairrosExtras] = useState('')
   const [pais, setPais] = useState('Brasil')
+  const [metodo, setMetodo] = useState<'amplo' | 'local'>('amplo')
+  const [hashtags, setHashtags] = useState('')
   const [statusBusca, setStatusBusca] = useState<StatusBusca | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [erroCredito, setErroCredito] = useState(false)
@@ -147,12 +150,20 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
 
     try {
       const { cidadeBusca, filtro } = montarLocalizacao()
+      // Método 'local' só faz sentido por cidade; no escopo país, usa 'amplo'.
+      const metodoEfetivo = ehInstagram && escopo === 'cidade' ? metodo : 'amplo'
+      const tags = hashtags
+        .split(/[,\n]/)
+        .map((t) => t.trim())
+        .filter(Boolean)
       const parametros = {
         token: token.trim(),
         nicho: nicho.trim(),
         cidade: cidadeBusca,
         maxResultados,
         filtroLocal: filtro,
+        metodo: metodoEfetivo,
+        hashtags: tags,
       }
       const resultados = ehInstagram
         ? await buscarLeadsInstagram(parametros, setStatusBusca, ac.signal)
@@ -468,6 +479,68 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
                       </p>
                     </div>
                   )}
+
+                  {escopo === 'cidade' && (
+                    <div>
+                      <span className="mb-1.5 block text-sm font-medium text-gray-700">Método de busca</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ['amplo', 'Descoberta ampla'],
+                            ['local', 'Local do Instagram'],
+                          ] as const
+                        ).map(([op, rotulo]) => (
+                          <button
+                            key={op}
+                            type="button"
+                            onClick={() => setMetodo(op)}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                              metodo === op
+                                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                                : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-100'
+                            }`}
+                          >
+                            {rotulo}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {metodo === 'amplo'
+                          ? 'Busca por usuário + hashtags. Bom para volume.'
+                          : 'Perfis marcados na página de local da cidade. Mais preciso na geografia, mas consome mais créditos.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {(escopo === 'pais' || metodo === 'amplo') && (
+                    <div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Hashtags <span className="font-normal text-gray-400">(opcional)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cid = escopo === 'pais' ? pais : localidadeNome || cidade
+                            const sug = sugerirHashtags(nicho, cid)
+                            if (sug.length) setHashtags(sug.join(', '))
+                          }}
+                          className="text-xs font-medium text-brand-600 hover:underline"
+                        >
+                          Sugerir
+                        </button>
+                      </div>
+                      <input
+                        value={hashtags}
+                        onChange={(e) => setHashtags(e.target.value)}
+                        className="input"
+                        placeholder="dentistabrasilia, odontobrasilia"
+                      />
+                      <p className="mt-1 text-xs text-gray-400">
+                        Perfis que usam essas hashtags entram mesmo sem a cidade na bio. Separe por vírgula.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               <div>
@@ -606,7 +679,7 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
             <>
               <button onClick={fechar} className="btn-secondary">Cancelar</button>
               <button onClick={buscar} className="btn-primary">
-                <Search size={16} /> Buscar empresas
+                <Search size={16} /> {ehInstagram ? 'Buscar perfis' : ehLinkedin ? 'Buscar decisores' : 'Buscar empresas'}
               </button>
             </>
           )}

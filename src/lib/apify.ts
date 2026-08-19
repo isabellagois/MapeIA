@@ -10,6 +10,8 @@ const APIFY_BASE = 'https://api.apify.com/v2'
 const ACTOR_ID = 'compass~crawler-google-places'
 const ACTOR_IG_SEARCH = 'apify~instagram-search-scraper'
 const ACTOR_IG_PROFILE = 'apify~instagram-profile-scraper'
+const ACTOR_IG_HASHTAG = 'apify~instagram-hashtag-scraper'
+const ACTOR_IG_SCRAPER = 'apify~instagram-scraper'
 const ACTOR_LINKEDIN = 'harvestapi~linkedin-profile-search'
 const STORAGE_KEY = 'apify_token'
 
@@ -23,7 +25,7 @@ export function salvarToken(token: string) {
 }
 
 import type { FiltroLocal } from './localidades'
-import { perfilPassaFiltro } from './localidades'
+import { normalizar, perfilPassaFiltro } from './localidades'
 
 export interface BuscaApifyParams {
   token: string
@@ -32,6 +34,14 @@ export interface BuscaApifyParams {
   maxResultados: number
   /** Filtro de localização (apenas Instagram). Quando ausente, não filtra. */
   filtroLocal?: FiltroLocal
+  /**
+   * Método de descoberta no Instagram:
+   *  - 'amplo' (padrão): busca por usuário + hashtags, cruzados por origem
+   *  - 'local': perfis marcados na página de local (place) da cidade
+   */
+  metodo?: 'amplo' | 'local'
+  /** Hashtags para o método 'amplo' (perfis vindos delas são geograficamente confiáveis) */
+  hashtags?: string[]
 }
 
 export interface ResultadoApify {
@@ -127,33 +137,76 @@ export async function buscarLeadsGoogleMaps(
 }
 
 /**
- * Busca leads no Instagram em duas etapas:
- *  1. Instagram Search Scraper — encontra perfis pela palavra-chave
- *  2. Instagram Profile Scraper — detalha cada perfil (bio, site, seguidores…)
+ * Busca leads no Instagram.
+ *
+ * Etapa 1 — descobrir @usuários (varia conforme o método):
+ *   - 'amplo': busca por usuário (filtrada por localização) + hashtags
+ *              (perfis vindos de hashtag são geograficamente confiáveis).
+ *   - 'local': perfis marcados na página de local (place) da cidade.
+ * Etapa 2 — detalhar cada perfil (bio, site, seguidores, telefone…).
+ * Etapa 3 — aplicar o filtro de localização apenas nos perfis SEM origem
+ *           confiável (os de hashtag/local passam direto).
  */
 export async function buscarLeadsInstagram(
   params: BuscaApifyParams,
   onStatus: (s: StatusBusca) => void,
   abortSignal?: AbortSignal
 ): Promise<ResultadoApify[]> {
-  const { token, nicho, cidade, maxResultados, filtroLocal } = params
+  const { token, nicho, cidade, maxResultados, filtroLocal, metodo = 'amplo', hashtags = [] } = params
 
-  // Etapa 1 — encontrar perfis
-  const termo = cidade.trim() ? `${nicho} ${cidade}` : nicho
-  const busca = await executarActor(
-    ACTOR_IG_SEARCH,
-    { search: termo, searchType: 'user', searchLimit: maxResultados },
-    token,
-    onStatus,
-    abortSignal
-  )
+  // @usuários de origem geograficamente confiável (hashtag/local) — passam
+  // direto pelo filtro. E @usuários da busca por usuário — passam pelo filtro.
+  const confiaveis = new Set<string>()
+  const doUsuario = new Set<string>()
 
-  const usernames = Array.from(
-    new Set(
-      busca
-        .map((i) => (i.username as string) || '')
-        .filter(Boolean)
+  if (metodo === 'local') {
+    // Perfis marcados na página de local da cidade
+    const alvo = cidade.trim() || nicho
+    const posts = await executarActor(
+      ACTOR_IG_SCRAPER,
+      { search: alvo, searchType: 'place', resultsType: 'posts', resultsLimit: maxResultados * 2, searchLimit: 1 },
+      token,
+      onStatus,
+      abortSignal
     )
+    for (const p of posts) {
+      const u = (p.ownerUsername as string) || ''
+      if (u) confiaveis.add(u)
+    }
+  } else {
+    // Método amplo: busca por usuário + hashtags
+    const termo = cidade.trim() ? `${nicho} ${cidade}` : nicho
+    const busca = await executarActor(
+      ACTOR_IG_SEARCH,
+      { search: termo, searchType: 'user', searchLimit: maxResultados },
+      token,
+      onStatus,
+      abortSignal
+    )
+    for (const i of busca) {
+      const u = (i.username as string) || ''
+      if (u) doUsuario.add(u)
+    }
+
+    const tags = hashtags.map((h) => h.replace(/^#/, '').trim()).filter(Boolean)
+    if (tags.length > 0) {
+      const posts = await executarActor(
+        ACTOR_IG_HASHTAG,
+        { hashtags: tags, resultsLimit: maxResultados },
+        token,
+        onStatus,
+        abortSignal
+      )
+      for (const p of posts) {
+        const u = (p.ownerUsername as string) || ''
+        if (u) confiaveis.add(u)
+      }
+    }
+  }
+
+  // Prioriza os confiáveis e completa com os da busca por usuário, até o limite
+  const usernames = Array.from(
+    new Set([...confiaveis, ...Array.from(doUsuario).filter((u) => !confiaveis.has(u))])
   ).slice(0, maxResultados)
 
   if (usernames.length === 0) return []
@@ -200,14 +253,29 @@ export async function buscarLeadsInstagram(
       }
     })
 
-  // Filtro de localização (quando configurado): descarta perfis de fora da
-  // cidade/país pedido, cruzando DDD/DDI do telefone com termos na bio/nome.
-  if (!filtroLocal) return mapeados
-  return mapeados.filter((l) =>
-    perfilPassaFiltro(
-      { telefone: l.telefone, nome: l.nome_empresa, username: l.username, bio: l.bio, endereco: l.endereco },
-      filtroLocal
-    )
+  // Método local traz perfis marcados no lugar, mas sem filtrar por nicho.
+  // Mantém só os relevantes (nome/bio/categoria batem alguma palavra do nicho).
+  let resultado = mapeados
+  if (metodo === 'local') {
+    const palavras = normalizar(nicho).split(/\s+/).filter((w) => w.length > 2)
+    if (palavras.length > 0) {
+      resultado = resultado.filter((l) => {
+        const txt = normalizar([l.nome_empresa, l.bio, l.categoria_gmn].filter(Boolean).join(' '))
+        return palavras.some((w) => txt.includes(w))
+      })
+    }
+  }
+
+  // Filtro de localização: perfis de origem confiável (hashtag/local) passam
+  // direto; os da busca por usuário passam pelo cruzamento DDD/DDI + termos.
+  if (!filtroLocal) return resultado
+  return resultado.filter(
+    (l) =>
+      (l.username && confiaveis.has(l.username)) ||
+      perfilPassaFiltro(
+        { telefone: l.telefone, nome: l.nome_empresa, username: l.username, bio: l.bio, endereco: l.endereco },
+        filtroLocal
+      )
   )
 }
 

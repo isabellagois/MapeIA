@@ -39,6 +39,27 @@ function digitos(tel: string | null | undefined): string {
   return (tel ?? '').replace(/\D/g, '')
 }
 
+/** Cola palavras sem acento/espaço para virar hashtag (ex.: "Águas Claras" -> "aguasclaras"). */
+function comoHashtag(texto: string): string {
+  return normalizar(texto).replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * Sugere hashtags a partir do nicho + cidade (ex.: "Dentistas" + "Brasília"
+ * -> ["dentistasbrasilia", "dentistabrasilia"]). Só uma sugestão inicial;
+ * o usuário pode editar.
+ */
+export function sugerirHashtags(nicho: string, cidade: string): string[] {
+  const n = comoHashtag(nicho)
+  const c = comoHashtag(cidade)
+  if (!n || !c) return []
+  const sugestoes = new Set<string>()
+  sugestoes.add(`${n}${c}`)
+  // Versão no singular (remove um "s" final do nicho), comum em hashtags
+  if (n.endsWith('s')) sugestoes.add(`${n.slice(0, -1)}${c}`)
+  return Array.from(sugestoes)
+}
+
 // ------------------------------------------------------------
 // CRUD
 // ------------------------------------------------------------
