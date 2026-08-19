@@ -22,11 +22,16 @@ export function salvarToken(token: string) {
   else localStorage.removeItem(STORAGE_KEY)
 }
 
+import type { FiltroLocal } from './localidades'
+import { perfilPassaFiltro } from './localidades'
+
 export interface BuscaApifyParams {
   token: string
   nicho: string
   cidade: string
   maxResultados: number
+  /** Filtro de localização (apenas Instagram). Quando ausente, não filtra. */
+  filtroLocal?: FiltroLocal
 }
 
 export interface ResultadoApify {
@@ -131,7 +136,7 @@ export async function buscarLeadsInstagram(
   onStatus: (s: StatusBusca) => void,
   abortSignal?: AbortSignal
 ): Promise<ResultadoApify[]> {
-  const { token, nicho, cidade, maxResultados } = params
+  const { token, nicho, cidade, maxResultados, filtroLocal } = params
 
   // Etapa 1 — encontrar perfis
   const termo = cidade.trim() ? `${nicho} ${cidade}` : nicho
@@ -162,7 +167,7 @@ export async function buscarLeadsInstagram(
     abortSignal
   )
 
-  return perfis
+  const mapeados = perfis
     .filter((p) => typeof p.username === 'string' && p.username)
     .map((p) => {
       const fone =
@@ -172,12 +177,18 @@ export async function buscarLeadsInstagram(
         null
       const bio = (p.biography as string) || ''
       const seguidores = typeof p.followersCount === 'number' ? p.followersCount : null
+      // Endereço comercial (contas business) — ajuda o filtro de localização
+      const endereco =
+        (p.addressStreet as string) ||
+        (p.city as string) ||
+        (p.businessAddress as string) ||
+        null
       return {
         nome_empresa: (p.fullName as string) || (p.username as string),
         telefone: fone,
         whatsapp: fone,
         website: (p.externalUrl as string) || null,
-        endereco: null,
+        endereco,
         bairro: null,
         cidade: cidade || null,
         nota_gmn: null,
@@ -188,6 +199,16 @@ export async function buscarLeadsInstagram(
         username: p.username as string,
       }
     })
+
+  // Filtro de localização (quando configurado): descarta perfis de fora da
+  // cidade/país pedido, cruzando DDD/DDI do telefone com termos na bio/nome.
+  if (!filtroLocal) return mapeados
+  return mapeados.filter((l) =>
+    perfilPassaFiltro(
+      { telefone: l.telefone, nome: l.nome_empresa, username: l.username, bio: l.bio, endereco: l.endereco },
+      filtroLocal
+    )
+  )
 }
 
 /**

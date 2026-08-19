@@ -25,6 +25,20 @@ export interface Profile {
   role: 'admin' | 'member'
 }
 
+export interface Localidade {
+  id: string
+  nome: string
+  uf: string | null
+  pais: string
+  /** Variações do nome (Brasilia, BSB, DF, Distrito Federal) */
+  apelidos: string[]
+  /** Códigos de área que confirmam a região pelo telefone (ex.: 61) */
+  ddds: string[]
+  /** Bairros/regiões que também contam como a cidade (ex.: Samambaia) */
+  bairros: string[]
+  created_at?: string
+}
+
 export type TipoCampanha = 'google' | 'instagram' | 'linkedin'
 
 export interface Campaign {

@@ -72,6 +72,20 @@ create table if not exists public.activities (
   created_at timestamptz not null default now()
 );
 
+-- Base de localidades para refinar buscas por localização (ver migration-localidades.sql).
+-- Base única e compartilhada: todos leem, só admin escreve.
+create table if not exists public.localidades (
+  id         uuid primary key default gen_random_uuid(),
+  nome       text not null,
+  uf         text,
+  pais       text not null default 'Brasil',
+  apelidos   text[] not null default '{}',
+  ddds       text[] not null default '{}',
+  bairros    text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  unique (nome, pais)
+);
+
 -- Índices
 create index if not exists idx_campaigns_org      on public.campaigns (org_id);
 create index if not exists idx_leads_campaign     on public.leads (campaign_id);
@@ -80,6 +94,7 @@ create index if not exists idx_leads_status       on public.leads (status_funil)
 create index if not exists idx_leads_retorno      on public.leads (data_retorno) where data_retorno is not null;
 create index if not exists idx_activities_lead    on public.activities (lead_id);
 create index if not exists idx_activities_org     on public.activities (org_id, created_at desc);
+create index if not exists idx_localidades_nome   on public.localidades (nome);
 
 -- Evita duplicatas pelo telefone dentro da mesma campanha
 create unique index if not exists uniq_lead_telefone_campanha
@@ -202,6 +217,7 @@ alter table public.profiles      enable row level security;
 alter table public.campaigns     enable row level security;
 alter table public.leads         enable row level security;
 alter table public.activities    enable row level security;
+alter table public.localidades   enable row level security;
 
 -- organizations
 drop policy if exists org_select on public.organizations;
@@ -243,3 +259,12 @@ create policy activities_select on public.activities
 drop policy if exists activities_insert on public.activities;
 create policy activities_insert on public.activities
   for insert with check (org_id = public.current_org_id());
+
+-- localidades (base compartilhada: todos leem, só admin escreve)
+drop policy if exists localidades_select on public.localidades;
+create policy localidades_select on public.localidades
+  for select using (auth.uid() is not null);
+
+drop policy if exists localidades_admin_write on public.localidades;
+create policy localidades_admin_write on public.localidades
+  for all using (public.is_admin()) with check (public.is_admin());

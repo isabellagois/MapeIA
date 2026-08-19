@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, Upload, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
@@ -12,6 +12,13 @@ import {
   type StatusBusca,
 } from '../lib/apify'
 import { chaveTelefone } from '../lib/utils'
+import {
+  listarLocalidades,
+  normalizar,
+  PAISES_DDI,
+  type FiltroLocal,
+  type Localidade,
+} from '../lib/localidades'
 import type { TipoCampanha } from '../types'
 import Spinner from './Spinner'
 import { notificarLeadsAtualizados } from './Layout'
@@ -36,6 +43,12 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
   const [nicho, setNicho] = useState(nichoSugerido ?? '')
   const [cidade, setCidade] = useState('')
   const [maxResultados, setMaxResultados] = useState(50)
+  // Refino de localização (apenas Instagram)
+  const [escopo, setEscopo] = useState<'cidade' | 'pais'>('cidade')
+  const [localidades, setLocalidades] = useState<Localidade[]>([])
+  const [localidadeNome, setLocalidadeNome] = useState('') // '' = digitar manualmente
+  const [bairrosExtras, setBairrosExtras] = useState('')
+  const [pais, setPais] = useState('Brasil')
   const [statusBusca, setStatusBusca] = useState<StatusBusca | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [erroCredito, setErroCredito] = useState(false)
@@ -44,6 +57,57 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
   const [duplicados, setDuplicados] = useState(0)
   const [qtdImportada, setQtdImportada] = useState(0)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+
+  // Carrega a base de localidades quando o modal do Instagram abre
+  useEffect(() => {
+    if (!aberto || !ehInstagram) return
+    let ativo = true
+    listarLocalidades()
+      .then((ls) => {
+        if (ativo) setLocalidades(ls)
+      })
+      .catch(() => {
+        /* silencioso: sem base, o filtro por cidade fica manual */
+      })
+    return () => {
+      ativo = false
+    }
+  }, [aberto, ehInstagram])
+
+  /**
+   * Monta o termo de busca do Instagram (parte "cidade") e o filtro de
+   * localização a partir do escopo/cidade/país escolhidos.
+   */
+  function montarLocalizacao(): { cidadeBusca: string; filtro?: FiltroLocal } {
+    if (!ehInstagram) return { cidadeBusca: cidade.trim() }
+
+    const extras = bairrosExtras
+      .split(/[,\n]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+
+    if (escopo === 'pais') {
+      const ddi = PAISES_DDI.find((p) => p.nome === pais)?.ddi
+      return {
+        cidadeBusca: pais === 'Brasil' ? '' : pais,
+        filtro: ddi ? { escopo: 'pais', termos: [], ddds: [], ddiAlvo: ddi } : undefined,
+      }
+    }
+
+    // Escopo cidade
+    const loc = localidades.find((l) => normalizar(l.nome) === normalizar(localidadeNome))
+    if (loc) {
+      const termos = Array.from(new Set([loc.nome, ...loc.apelidos, ...loc.bairros, ...extras]))
+      return { cidadeBusca: loc.nome, filtro: { escopo: 'cidade', termos, ddds: loc.ddds } }
+    }
+    // Cidade digitada manualmente (não cadastrada)
+    const manual = cidade.trim()
+    const termos = Array.from(new Set([manual, ...extras].filter(Boolean)))
+    return {
+      cidadeBusca: manual,
+      filtro: termos.length > 0 ? { escopo: 'cidade', termos, ddds: [] } : undefined,
+    }
+  }
 
   function reset() {
     setEtapa('formulario')
@@ -82,7 +146,14 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
     setAbortController(ac)
 
     try {
-      const parametros = { token: token.trim(), nicho: nicho.trim(), cidade: cidade.trim(), maxResultados }
+      const { cidadeBusca, filtro } = montarLocalizacao()
+      const parametros = {
+        token: token.trim(),
+        nicho: nicho.trim(),
+        cidade: cidadeBusca,
+        maxResultados,
+        filtroLocal: filtro,
+      }
       const resultados = ehInstagram
         ? await buscarLeadsInstagram(parametros, setStatusBusca, ac.signal)
         : ehLinkedin
@@ -92,7 +163,8 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
       if (resultados.length === 0) {
         setErro(
           ehInstagram
-            ? 'A busca não encontrou nenhum perfil. Tente outro termo (ex.: "pilates brasília" em vez de só "pilates").'
+            ? 'A busca não encontrou nenhum perfil na localização escolhida. ' +
+                'Tente outro termo, adicionar bairros/termos extras, ou trocar o filtro de localização (cidade/país).'
             : ehLinkedin
               ? 'A busca não encontrou nenhum decisor. Tente outro cargo (ex.: "CEO", "sócio fundador", "gerente comercial") ou escreva a localização por extenso (ex.: "Brasília").'
               : 'A busca não retornou nenhuma empresa. Isso costuma ser a localização escrita num formato que o mapa não entende: ' +
@@ -197,8 +269,10 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
       setEtapa('concluido')
       notificarLeadsAtualizados()
       onImportado(inseridos)
-    } catch {
-      setErro('Erro ao salvar os leads. Tente novamente.')
+    } catch (e) {
+      const detalhe = e instanceof Error ? e.message : String(e)
+      console.error('Falha ao salvar os leads:', e)
+      setErro(`Erro ao salvar os leads: ${detalhe}`)
       setEtapa('preview')
     }
   }
@@ -292,26 +366,110 @@ export default function ApifySearchModal({ campaignId, orgId, tipo, nichoSugerid
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    {ehLinkedin ? 'Localização' : 'Cidade'}{' '}
-                    {(ehInstagram || ehLinkedin) && <span className="font-normal text-gray-400">(opcional)</span>}
-                  </label>
-                  <input
-                    value={cidade}
-                    onChange={(e) => setCidade(e.target.value)}
-                    className="input"
-                    placeholder={ehInstagram || ehLinkedin ? 'Brasília' : 'Águas Claras, Brasília'}
-                  />
-                  <p className="mt-1 text-xs text-gray-400">
-                    {ehInstagram
-                      ? 'Entra como parte do termo de busca (ex.: "pilates brasília").'
-                      : ehLinkedin
+                {!ehInstagram && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      {ehLinkedin ? 'Localização' : 'Cidade'}{' '}
+                      {ehLinkedin && <span className="font-normal text-gray-400">(opcional)</span>}
+                    </label>
+                    <input
+                      value={cidade}
+                      onChange={(e) => setCidade(e.target.value)}
+                      className="input"
+                      placeholder={ehLinkedin ? 'Brasília' : 'Águas Claras, Brasília'}
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      {ehLinkedin
                         ? 'Filtro de localização do LinkedIn — escreva por extenso (ex.: "Brasília", "São Paulo").'
                         : 'Formato: "Bairro, Cidade" ou só "Cidade" — sem hífen e sem sigla do estado.'}
-                  </p>
-                </div>
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {ehInstagram && (
+                <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <div>
+                    <span className="mb-1.5 block text-sm font-medium text-gray-700">Filtrar por localização</span>
+                    <div className="flex gap-2">
+                      {(['cidade', 'pais'] as const).map((op) => (
+                        <button
+                          key={op}
+                          type="button"
+                          onClick={() => setEscopo(op)}
+                          className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                            escopo === op
+                              ? 'border-brand-600 bg-brand-50 text-brand-700'
+                              : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          {op === 'cidade' ? 'Por cidade' : 'Por país'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {escopo === 'cidade' ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                        <select
+                          value={localidadeNome}
+                          onChange={(e) => setLocalidadeNome(e.target.value)}
+                          className="input"
+                        >
+                          <option value="">Digitar manualmente…</option>
+                          {localidades.map((l) => (
+                            <option key={l.id} value={l.nome}>
+                              {l.nome}
+                              {l.uf ? ` - ${l.uf}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {localidadeNome === '' && (
+                          <input
+                            value={cidade}
+                            onChange={(e) => setCidade(e.target.value)}
+                            className="input mt-2"
+                            placeholder="Brasília"
+                          />
+                        )}
+                        <p className="mt-1 text-xs text-gray-400">
+                          Cidades cadastradas já reconhecem bairros e DDD automaticamente.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                          Bairros / termos extras <span className="font-normal text-gray-400">(opcional)</span>
+                        </label>
+                        <input
+                          value={bairrosExtras}
+                          onChange={(e) => setBairrosExtras(e.target.value)}
+                          className="input"
+                          placeholder="Sudoeste, Lago Sul"
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                          Somados aos bairros já cadastrados. Separe por vírgula.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">País</label>
+                      <select value={pais} onChange={(e) => setPais(e.target.value)} className="input">
+                        {PAISES_DDI.map((p) => (
+                          <option key={p.nome} value={p.nome}>
+                            {p.nome}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Mantém perfis cujo telefone é do país (ou sem telefone identificável) e descarta os de outro país.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Máximo de {ehInstagram ? 'perfis' : ehLinkedin ? 'decisores' : 'empresas'}:{' '}

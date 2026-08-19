@@ -3,9 +3,9 @@ import { useAuth } from '../hooks/useAuth'
 import Spinner from '../components/Spinner'
 
 export default function Login() {
-  const { entrar, cadastrar } = useAuth()
+  const { entrar, cadastrar, recuperarSenha } = useAuth()
   const orgIdConvite = new URLSearchParams(window.location.search).get('convite')
-  const [modo, setModo] = useState<'login' | 'cadastro'>(orgIdConvite ? 'cadastro' : 'login')
+  const [modo, setModo] = useState<'login' | 'cadastro' | 'recuperar'>(orgIdConvite ? 'cadastro' : 'login')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
@@ -14,9 +14,32 @@ export default function Login() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
 
+  function trocarModo(m: 'login' | 'cadastro' | 'recuperar') {
+    setModo(m)
+    setErro(null)
+    setAviso(null)
+  }
+
   async function enviar() {
     setErro(null)
     setAviso(null)
+
+    if (modo === 'recuperar') {
+      if (!email) {
+        setErro('Informe seu e-mail.')
+        return
+      }
+      setCarregando(true)
+      const { erro } = await recuperarSenha(email)
+      setCarregando(false)
+      if (erro) setErro(erro)
+      else
+        setAviso(
+          'Se este e-mail tiver uma conta, enviamos um link para redefinir a senha. Verifique sua caixa de entrada e o spam.'
+        )
+      return
+    }
+
     if (!email || !senha) {
       setErro('Preencha e-mail e senha.')
       return
@@ -49,23 +72,25 @@ export default function Login() {
           <p className="mt-1 text-sm text-gray-500">Gestão de leads · Google Meu Negócio</p>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 rounded-lg bg-gray-100 p-1 text-sm font-medium">
-          {(['login', 'cadastro'] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => {
-                setModo(m)
-                setErro(null)
-                setAviso(null)
-              }}
-              className={`rounded-md py-1.5 transition ${
-                modo === m ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              {m === 'login' ? 'Entrar' : 'Criar conta'}
-            </button>
-          ))}
-        </div>
+        {modo === 'recuperar' ? (
+          <div className="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800">
+            Informe o e-mail da sua conta e enviaremos um link para você criar uma nova senha.
+          </div>
+        ) : (
+          <div className="mb-5 grid grid-cols-2 rounded-lg bg-gray-100 p-1 text-sm font-medium">
+            {(['login', 'cadastro'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => trocarModo(m)}
+                className={`rounded-md py-1.5 transition ${
+                  modo === m ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                {m === 'login' ? 'Entrar' : 'Criar conta'}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-3">
           {modo === 'cadastro' && orgIdConvite && (
@@ -97,24 +122,53 @@ export default function Login() {
               placeholder="voce@empresa.com.br"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Senha</label>
-            <input
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && enviar()}
-              className="input"
-              placeholder="••••••••"
-            />
-          </div>
+          {modo !== 'recuperar' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Senha</label>
+              <input
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && enviar()}
+                className="input"
+                placeholder="••••••••"
+              />
+              {modo === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => trocarModo('recuperar')}
+                  className="mt-1.5 text-xs font-medium text-brand-600 hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+            </div>
+          )}
 
           {erro && <p className="text-sm text-red-600">{erro}</p>}
           {aviso && <p className="text-sm text-green-700">{aviso}</p>}
 
           <button onClick={enviar} disabled={carregando} className="btn-primary w-full">
-            {carregando ? <Spinner /> : modo === 'login' ? 'Entrar' : 'Criar conta'}
+            {carregando ? (
+              <Spinner />
+            ) : modo === 'login' ? (
+              'Entrar'
+            ) : modo === 'cadastro' ? (
+              'Criar conta'
+            ) : (
+              'Enviar link de recuperação'
+            )}
           </button>
+
+          {modo === 'recuperar' && (
+            <button
+              type="button"
+              onClick={() => trocarModo('login')}
+              className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              ← Voltar para o login
+            </button>
+          )}
         </div>
       </div>
     </div>

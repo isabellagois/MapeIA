@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { BellRing, LayoutDashboard, LogOut, Megaphone, Menu, Users, X } from 'lucide-react'
+import { BellRing, LayoutDashboard, LogOut, MapPin, Megaphone, Menu, Users, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { hojeISO } from '../lib/utils'
@@ -60,6 +60,11 @@ export default function Layout() {
       <NavLink to="/equipe" className={itemClasse} onClick={() => setMenuAberto(false)}>
         <Users size={18} /> Equipe
       </NavLink>
+      {profile?.role === 'admin' && (
+        <NavLink to="/localidades" className={itemClasse} onClick={() => setMenuAberto(false)}>
+          <MapPin size={18} /> Localidades
+        </NavLink>
+      )}
     </nav>
   )
 
