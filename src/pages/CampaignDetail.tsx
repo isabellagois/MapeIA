@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Columns3,
@@ -186,6 +187,12 @@ export default function CampaignDetail() {
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
   const paginaAtual = Math.min(pagina, totalPaginas)
   const visiveis = filtrados.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA)
+
+  // Quantos leads já foram abordados (qualquer status diferente de "Não contatado")
+  const contatados = useMemo(
+    () => filtrados.filter((l) => l.status_funil !== 'nao_contatado').length,
+    [filtrados]
+  )
 
   useEffect(() => {
     setPagina(1)
@@ -441,6 +448,12 @@ export default function CampaignDetail() {
             {filtrados.length} {filtrados.length === 1 ? 'lead' : 'leads'}
             {filtrados.length !== leads.length && ` (de ${leads.length})`}
           </p>
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+            title="Leads que já foram abordados (qualquer status diferente de Não contatado)"
+          >
+            <CheckCircle2 size={13} /> {contatados} já contatados
+          </span>
           <div className="flex rounded-lg border border-gray-200 p-0.5">
             <button
               onClick={() => mudarVisao('tabela')}
