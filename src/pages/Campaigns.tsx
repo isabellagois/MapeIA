@@ -4,7 +4,7 @@ import { Archive, ArchiveRestore, Check, Pencil, Plus, Trash2, X } from 'lucide-
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { nomeMembro, useEquipe } from '../hooks/useEquipe'
-import type { Campaign, CampaignMetrics, StatusFunil, TipoCampanha } from '../types'
+import type { Campaign, CampaignMetrics, TipoCampanha } from '../types'
 import Spinner from '../components/Spinner'
 
 export default function Campaigns() {
@@ -35,21 +35,29 @@ export default function Campaigns() {
     setCarregando(true)
     setErro(null)
     try {
-      const [campRes, leadsRes] = await Promise.all([
+      // Métricas contadas no banco (evita o limite de 1000 linhas do Supabase
+      // que zerava/errava a contagem quando havia muitos leads no total).
+      const [campRes, metRes] = await Promise.all([
         supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
-        supabase.from('leads').select('campaign_id, status_funil'),
+        supabase.rpc('campaign_metrics'),
       ])
       if (campRes.error) throw campRes.error
+      if (metRes.error) throw metRes.error
 
       const m: Record<string, CampaignMetrics> = {}
-      for (const l of leadsRes.data ?? []) {
-        const id = l.campaign_id as string
-        if (!m[id]) m[id] = { total: 0, contatados: 0, negociacao: 0, fechados: 0 }
-        m[id].total++
-        const s = l.status_funil as StatusFunil
-        if (s !== 'nao_contatado') m[id].contatados++
-        if (s === 'em_negociacao' || s === 'proposta_enviada') m[id].negociacao++
-        if (s === 'fechado') m[id].fechados++
+      for (const row of (metRes.data ?? []) as {
+        campaign_id: string
+        total: number
+        contatados: number
+        negociacao: number
+        fechados: number
+      }[]) {
+        m[row.campaign_id] = {
+          total: Number(row.total),
+          contatados: Number(row.contatados),
+          negociacao: Number(row.negociacao),
+          fechados: Number(row.fechados),
+        }
       }
 
       setCampanhas((campRes.data as Campaign[]) ?? [])
