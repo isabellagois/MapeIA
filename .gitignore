@@ -6,3 +6,6 @@ dist
 .vercel
 *.log
 .DS_Store
+
+# Config local do Claude Code (nao versionar)
+.claude/
