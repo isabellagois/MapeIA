@@ -102,3 +102,11 @@ O **token da Apify** não é variável de ambiente — cada usuário informa o p
 Deploy contínuo na **Vercel**: todo push na branch `main` publica automaticamente. Detalhes e solução de problemas (inclusive quando a Vercel "perde" um push) em [docs/DEPLOY.md](docs/DEPLOY.md).
 
 > ⚠️ Commits precisam do e-mail de autor autorizado no projeto da Vercel, senão o deploy é bloqueado.
+
+---
+
+## 📄 Licença
+
+Distribuído sob a licença **MIT** — veja [LICENSE](LICENSE). Você pode usar, copiar, modificar e distribuir livremente, inclusive comercialmente, mantendo o aviso de copyright. O software é fornecido "como está", sem garantias.
+
+> Ao copiar este projeto, use a **sua própria** infraestrutura (seu Supabase, suas chaves). Os dados de cada instalação ficam no banco de quem a hospeda — o código é público, os dados não.
