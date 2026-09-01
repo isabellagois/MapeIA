@@ -1,69 +1,111 @@
 import type { Prioridade, StatusFunil } from '../types'
 
-/** Configuração visual e de rótulos das 7 etapas do funil + status especial */
+/** Configuração visual e de rótulos das etapas do funil */
 export const STATUS_CONFIG: Record<
   StatusFunil,
   { label: string; ordem: number; badge: string; dot: string }
 > = {
-  nao_contatado: {
-    label: 'Não contatado',
+  a_contatar: {
+    label: 'A contatar',
     ordem: 1,
     badge: 'bg-gray-100 text-gray-700 border border-gray-200',
     dot: 'bg-gray-400',
   },
-  tentativa: {
-    label: 'Tentativa — não atendeu',
+  dia_1: {
+    label: 'Dia 1 · Abertura',
     ordem: 2,
     badge: 'bg-sky-100 text-sky-700 border border-sky-200',
     dot: 'bg-sky-400',
   },
-  tentativa_msg: {
-    label: 'Tentativa — não respondeu mensagem',
+  dia_2: {
+    label: 'Dia 2 · Follow',
     ordem: 3,
     badge: 'bg-cyan-100 text-cyan-700 border border-cyan-200',
     dot: 'bg-cyan-400',
   },
-  contato_feito: {
-    label: 'Contato feito',
+  dia_3: {
+    label: 'Dia 3 · Aquecimento',
     ordem: 4,
-    badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    dot: 'bg-emerald-400',
+    badge: 'bg-teal-100 text-teal-700 border border-teal-200',
+    dot: 'bg-teal-400',
   },
-  proposta_enviada: {
-    label: 'Proposta enviada',
+  dia_4: {
+    label: 'Dia 4 · Prova',
     ordem: 5,
-    badge: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-    dot: 'bg-yellow-400',
+    badge: 'bg-blue-100 text-blue-700 border border-blue-200',
+    dot: 'bg-blue-400',
   },
-  em_negociacao: {
-    label: 'Em negociação',
+  dia_5: {
+    label: 'Dia 5 · Outro canal',
     ordem: 6,
+    badge: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+    dot: 'bg-indigo-400',
+  },
+  dia_6: {
+    label: 'Dia 6 · Reforço',
+    ordem: 7,
+    badge: 'bg-violet-100 text-violet-700 border border-violet-200',
+    dot: 'bg-violet-400',
+  },
+  dia_7: {
+    label: 'Dia 7 · Breakup',
+    ordem: 8,
+    badge: 'bg-purple-100 text-purple-700 border border-purple-200',
+    dot: 'bg-purple-400',
+  },
+  respondeu: {
+    label: 'Respondeu',
+    ordem: 9,
+    badge: 'bg-amber-100 text-amber-800 border border-amber-200',
+    dot: 'bg-amber-400',
+  },
+  reuniao_marcada: {
+    label: 'Reunião marcada',
+    ordem: 10,
     badge: 'bg-orange-100 text-orange-800 border border-orange-200',
     dot: 'bg-orange-400',
   },
-  fechado: {
-    label: 'Cliente fechado ✅',
-    ordem: 7,
+  virou_cliente: {
+    label: 'Virou cliente ✅',
+    ordem: 11,
     badge: 'bg-green-700 text-white border border-green-800',
     dot: 'bg-green-700',
   },
-  descartado: {
-    label: 'Sem interesse ❌',
-    ordem: 8,
+  perdido: {
+    label: 'Perdido ❌',
+    ordem: 12,
     badge: 'bg-red-100 text-red-700 border border-red-200',
     dot: 'bg-red-400',
-  },
-  retornar: {
-    label: 'Retornar em data agendada',
-    ordem: 9,
-    badge: 'bg-violet-100 text-violet-700 border border-violet-200',
-    dot: 'bg-violet-400',
   },
 }
 
 export const STATUS_LIST = (Object.keys(STATUS_CONFIG) as StatusFunil[]).sort(
   (a, b) => STATUS_CONFIG[a].ordem - STATUS_CONFIG[b].ordem
 )
+
+// --- Papéis semânticos do funil (usados por métricas / "Para contatar") ---
+/** Estágio inicial: onde todo lead novo entra. "Contatado" = tudo diferente disto. */
+export const STATUS_INICIAL: StatusFunil = 'a_contatar'
+/** Cliente ganho (dashboard, conversão, métrica "fechados"). */
+export const STATUS_GANHO: StatusFunil = 'virou_cliente'
+/** Lead perdido/descartado. */
+export const STATUS_PERDIDO: StatusFunil = 'perdido'
+/** Estágios que contam como "em negociação" nas métricas. */
+export const STATUS_NEGOCIACAO: StatusFunil[] = ['reuniao_marcada']
+/** Estágios encerrados: excluídos da página "Para contatar" e de contagens ativas. */
+export const STATUS_ENCERRADOS: StatusFunil[] = ['virou_cliente', 'perdido']
+
+const STATUS_PADRAO = {
+  label: 'Sem etapa',
+  ordem: 999,
+  badge: 'bg-gray-100 text-gray-700 border border-gray-200',
+  dot: 'bg-gray-400',
+}
+
+/** Busca a config de um status com fallback seguro (evita quebrar em chaves antigas). */
+export function statusInfo(status: string) {
+  return STATUS_CONFIG[status as StatusFunil] ?? { ...STATUS_PADRAO, label: status }
+}
 
 export const PRIORIDADE_BADGE: Record<Prioridade, string> = {
   Alta: 'bg-red-50 text-red-700 border border-red-200',

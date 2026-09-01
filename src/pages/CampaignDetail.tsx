@@ -23,11 +23,13 @@ import { nomeMembro, useEquipe } from '../hooks/useEquipe'
 import type { Campaign, Lead, NivelAcesso, Prioridade, StatusFunil } from '../types'
 import {
   STATUS_CONFIG,
+  STATUS_INICIAL,
   STATUS_LIST,
   formatarData,
   linkWhatsApp,
   retornoVencido,
   somarDias,
+  statusInfo,
 } from '../lib/utils'
 import { notificarLeadsAtualizados } from '../components/Layout'
 import { baixarCsv, gerarCsvExport } from '../lib/csv'
@@ -171,7 +173,7 @@ export default function CampaignDetail() {
           cmp = (prioridadeOrdem[a.prioridade ?? ''] ?? 9) - (prioridadeOrdem[b.prioridade ?? ''] ?? 9)
           break
         case 'status_funil':
-          cmp = STATUS_CONFIG[a.status_funil].ordem - STATUS_CONFIG[b.status_funil].ordem
+          cmp = statusInfo(a.status_funil).ordem - statusInfo(b.status_funil).ordem
           break
         case 'data_retorno':
           cmp = (a.data_retorno ?? '9999').localeCompare(b.data_retorno ?? '9999')
@@ -190,7 +192,7 @@ export default function CampaignDetail() {
 
   // Quantos leads já foram abordados (qualquer status diferente de "Não contatado")
   const contatados = useMemo(
-    () => filtrados.filter((l) => l.status_funil !== 'nao_contatado').length,
+    () => filtrados.filter((l) => l.status_funil !== STATUS_INICIAL).length,
     [filtrados]
   )
 
@@ -233,7 +235,7 @@ export default function CampaignDetail() {
         itens_faltando_gmn: l.itens_faltando_gmn ?? '',
         argumento_vendas: l.argumento_vendas ?? '',
         prioridade: l.prioridade ?? '',
-        status: STATUS_CONFIG[l.status_funil].label,
+        status: statusInfo(l.status_funil).label,
         data_retorno: l.data_retorno ?? '',
         notas: l.notas ?? '',
         ultima_atividade: ultimaAtividade[l.id]
@@ -302,8 +304,6 @@ export default function CampaignDetail() {
     const lead = leads.find((l) => l.id === leadId)
     if (!lead || lead.status_funil === novoStatus) return
     const payload: Partial<Lead> = { status_funil: novoStatus }
-    // Mover para "retornar" sem data agendada ganha um padrão de +3 dias
-    if (novoStatus === 'retornar' && !lead.data_retorno) payload.data_retorno = somarDias(3)
     const { data, error } = await supabase
       .from('leads')
       .update(payload)

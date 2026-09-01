@@ -46,15 +46,19 @@ create table if not exists public.leads (
   itens_faltando_gmn  text,
   argumento_vendas    text,
   prioridade          text check (prioridade in ('Alta', 'Média', 'Baixa')),
-  status_funil        text not null default 'nao_contatado' check (status_funil in (
-                        'nao_contatado',      -- 1. Não contatado
-                        'tentativa',          -- 2. Tentativa - não atendeu
-                        'contato_feito',      -- 3. Contato feito
-                        'proposta_enviada',   -- 4. Proposta enviada
-                        'em_negociacao',      -- 5. Em negociação
-                        'fechado',            -- 6. Cliente fechado
-                        'descartado',         -- 7. Sem interesse / Descartado
-                        'retornar'            -- Especial: retornar em X dias
+  status_funil        text not null default 'a_contatar' check (status_funil in (
+                        'a_contatar',         -- 1. A contatar (inicial)
+                        'dia_1',              -- 2. Dia 1 · Abertura
+                        'dia_2',              -- 3. Dia 2 · Follow
+                        'dia_3',              -- 4. Dia 3 · Aquecimento
+                        'dia_4',              -- 5. Dia 4 · Prova
+                        'dia_5',              -- 6. Dia 5 · Outro canal
+                        'dia_6',              -- 7. Dia 6 · Reforço
+                        'dia_7',              -- 8. Dia 7 · Breakup
+                        'respondeu',          -- 9. Respondeu
+                        'reuniao_marcada',    -- 10. Reunião marcada (negociação)
+                        'virou_cliente',      -- 11. Virou cliente (ganho)
+                        'perdido'             -- 12. Perdido
                       )),
   data_retorno        date,
   notas               text,

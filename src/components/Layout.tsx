@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { BellRing, LayoutDashboard, LogOut, MapPin, Megaphone, Menu, Users, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { hojeISO } from '../lib/utils'
+import { hojeISO, STATUS_ENCERRADOS } from '../lib/utils'
 
 export default function Layout() {
   const { profile, sair } = useAuth()
@@ -18,7 +18,7 @@ export default function Layout() {
         .from('leads')
         .select('id', { count: 'exact', head: true })
         .lte('data_retorno', hojeISO())
-        .not('status_funil', 'in', '(fechado,descartado)')
+        .not('status_funil', 'in', `(${STATUS_ENCERRADOS.join(',')})`)
       if (ativo) setQtdRetornos(count ?? 0)
     }
     carregar()

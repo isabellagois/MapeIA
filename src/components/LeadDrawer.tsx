@@ -135,12 +135,6 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
       email: email.trim() || null,
     }
 
-    if (status === 'retornar' && !dataRetorno) {
-      setErro('Para o status "Retornar", escolha a data de retorno.')
-      setSalvando(false)
-      return
-    }
-
     const { data, error } = await supabase
       .from('leads')
       .update(payload)
@@ -427,16 +421,11 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
           <Secao titulo="Status do funil">
             <select
               value={status}
-              onChange={(e) => {
-                const novo = e.target.value as StatusFunil
-                setStatus(novo)
-                if (novo === 'retornar' && !dataRetorno) setDataRetorno(somarDias(3))
-              }}
+              onChange={(e) => setStatus(e.target.value as StatusFunil)}
               className="input"
             >
               {STATUS_LIST.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_CONFIG[s].ordem <= 8 ? `${STATUS_CONFIG[s].ordem}. ` : ''}
                   {STATUS_CONFIG[s].label}
                 </option>
               ))}
@@ -488,10 +477,7 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
                   <button
                     key={d}
                     type="button"
-                    onClick={() => {
-                      setDataRetorno(somarDias(d))
-                      setStatus('retornar')
-                    }}
+                    onClick={() => setDataRetorno(somarDias(d))}
                     className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:border-brand-500 hover:text-brand-600"
                   >
                     +{d}d
@@ -509,7 +495,6 @@ export default function LeadDrawer({ lead, aberto, onFechar, onAtualizado, onExc
                       const n = parseInt(e.target.value, 10)
                       if (n >= 1 && n <= 365) {
                         setDataRetorno(somarDias(n))
-                        setStatus('retornar')
                       }
                     }}
                     placeholder="X"

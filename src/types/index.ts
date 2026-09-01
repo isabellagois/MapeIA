@@ -1,15 +1,18 @@
 export type Prioridade = 'Alta' | 'Média' | 'Baixa'
 
 export type StatusFunil =
-  | 'nao_contatado'
-  | 'tentativa'
-  | 'tentativa_msg'
-  | 'contato_feito'
-  | 'proposta_enviada'
-  | 'em_negociacao'
-  | 'fechado'
-  | 'descartado'
-  | 'retornar'
+  | 'a_contatar'
+  | 'dia_1'
+  | 'dia_2'
+  | 'dia_3'
+  | 'dia_4'
+  | 'dia_5'
+  | 'dia_6'
+  | 'dia_7'
+  | 'respondeu'
+  | 'reuniao_marcada'
+  | 'virou_cliente'
+  | 'perdido'
 
 export interface Organization {
   id: string

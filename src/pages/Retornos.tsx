@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { BellRing, MessageCircle, Phone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Campaign, Lead } from '../types'
-import { diasAtraso, formatarData, hojeISO, linkTelefone, linkWhatsApp } from '../lib/utils'
+import { diasAtraso, formatarData, hojeISO, linkTelefone, linkWhatsApp, STATUS_ENCERRADOS } from '../lib/utils'
 import StatusBadge from '../components/StatusBadge'
 import PrioridadeBadge from '../components/PrioridadeBadge'
 import Spinner from '../components/Spinner'
@@ -25,7 +25,7 @@ export default function Retornos() {
           .from('leads')
           .select('*')
           .lte('data_retorno', hojeISO())
-          .not('status_funil', 'in', '(fechado,descartado)')
+          .not('status_funil', 'in', `(${STATUS_ENCERRADOS.join(',')})`)
           .order('data_retorno', { ascending: true }) // mais atrasados primeiro
           .order('hora_retorno', { ascending: true, nullsFirst: false }),
         supabase.from('campaigns').select('*'),
@@ -51,7 +51,7 @@ export default function Retornos() {
     const aindaVencido =
       atualizado.data_retorno &&
       atualizado.data_retorno <= hojeISO() &&
-      !['fechado', 'descartado'].includes(atualizado.status_funil)
+      !STATUS_ENCERRADOS.includes(atualizado.status_funil)
     setLeads((prev) =>
       aindaVencido
         ? prev.map((l) => (l.id === atualizado.id ? atualizado : l))

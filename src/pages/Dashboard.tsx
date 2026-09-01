@@ -4,7 +4,16 @@ import { ArrowRight, BellRing, TrendingUp, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useEquipe } from '../hooks/useEquipe'
 import type { Activity, StatusFunil } from '../types'
-import { STATUS_CONFIG, STATUS_LIST, formatarDataHora, hojeISO } from '../lib/utils'
+import {
+  STATUS_CONFIG,
+  STATUS_ENCERRADOS,
+  STATUS_GANHO,
+  STATUS_LIST,
+  STATUS_NEGOCIACAO,
+  STATUS_PERDIDO,
+  formatarDataHora,
+  hojeISO,
+} from '../lib/utils'
 import Spinner from '../components/Spinner'
 
 interface Contagens {
@@ -39,7 +48,7 @@ export default function Dashboard() {
             .from('leads')
             .select('id', { count: 'exact', head: true })
             .lte('data_retorno', hojeISO())
-            .not('status_funil', 'in', '(fechado,descartado)'),
+            .not('status_funil', 'in', `(${STATUS_ENCERRADOS.join(',')})`),
           supabase
             .from('activities')
             .select('*, profiles:user_id (full_name, email)')
@@ -69,8 +78,8 @@ export default function Dashboard() {
           if (l.responsavel_id) {
             const p = garantir(l.responsavel_id as string)
             p.atribuidos++
-            if (s === 'fechado') p.fechados++
-            if (s === 'em_negociacao' || s === 'proposta_enviada') p.emNegociacao++
+            if (s === STATUS_GANHO) p.fechados++
+            if (STATUS_NEGOCIACAO.includes(s)) p.emNegociacao++
           }
         }
 
@@ -104,8 +113,8 @@ export default function Dashboard() {
     )
   if (erro || !contagens) return <p className="text-sm text-red-600">{erro}</p>
 
-  const ativos = contagens.total - contagens.porStatus.descartado
-  const fechados = contagens.porStatus.fechado
+  const ativos = contagens.total - contagens.porStatus[STATUS_PERDIDO]
+  const fechados = contagens.porStatus[STATUS_GANHO]
   const taxaConversao = contagens.total > 0 ? ((fechados / contagens.total) * 100).toFixed(1) : '0'
   const maxEtapa = Math.max(1, ...STATUS_LIST.map((s) => contagens.porStatus[s]))
 
