@@ -1,0 +1,33 @@
+name: CI
+
+# Valida o build (checagem de tipos + Vite) a cada push e pull request na main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build (tsc -b && vite build)
+        run: npm run build
+        env:
+          # Valores fictícios só para o build passar (o app real usa os
+          # seus próprios nas variáveis de ambiente da Vercel).
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-dummy-anon-key

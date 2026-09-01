@@ -1,5 +1,11 @@
 # MapeIA 📍
 
+[![CI](https://github.com/isabellagois/MapeIA/actions/workflows/ci.yml/badge.svg)](https://github.com/isabellagois/MapeIA/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?logo=supabase&logoColor=white)
+
 **CRM web de prospecção multicanal.** Encontre leads no **Google Maps**, **Instagram** e **LinkedIn** (via Apify), organize-os em campanhas, trabalhe um **funil de cadência** no Kanban, agende retornos, dispare **campanhas de e-mail** e acompanhe tudo em um dashboard — com controle de acesso por equipe.
 
 **Stack:** React + Vite + TypeScript · Tailwind CSS · Supabase (PostgreSQL + Auth + RLS) · Funções serverless na Vercel · Resend (e-mail) · Apify (scraping)
@@ -81,6 +87,31 @@ npm run dev      # desenvolvimento local (Vite)
 npm run build    # build de produção (tsc -b && vite build)
 npm run preview  # pré-visualizar o build
 ```
+
+---
+
+## 🐳 Rodar com Docker
+
+O `Dockerfile` faz um build multi-stage (Node para compilar, Nginx para servir a SPA):
+
+```bash
+# Build da imagem (passe as suas chaves do Supabase como build-args)
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://xxxx.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=sua-anon-key \
+  -t mapeia .
+
+# Rodar
+docker run -p 8080:80 mapeia    # http://localhost:8080
+```
+
+> O container serve apenas a SPA. A função serverless de e-mail (`api/enviar-emails.ts`) é específica da Vercel e não roda no container.
+
+---
+
+## ✅ Integração contínua (CI)
+
+Um workflow do **GitHub Actions** (`.github/workflows/ci.yml`) roda a cada push e pull request na `main`, validando o build (checagem de tipos + Vite). O status aparece no badge no topo deste README e em cada commit.
 
 ---
 
